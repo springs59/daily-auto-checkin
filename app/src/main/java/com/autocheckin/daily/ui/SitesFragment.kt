@@ -46,7 +46,6 @@ class SitesFragment : Fragment() {
                 refresh()
             },
             onDelete = { site -> confirmDelete(site) }
-            }
         )
         binding.siteList.layoutManager = LinearLayoutManager(requireContext())
         binding.siteList.adapter = adapter
