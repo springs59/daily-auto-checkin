@@ -47,10 +47,10 @@ graph TD
 
 ## 在 GitHub 上编译 APK
 
-推送到 GitHub 后，`Actions` 页会自动触发 **Build APK** 工作流，编译出 Debug 与 Release 两个 APK：
+推送到 GitHub 后，`Actions` 页会自动触发 **Build APK** 工作流，编译出 Debug 与 Release 两个通用 APK。每个 APK 均覆盖 `armeabi-v7a`、`arm64-v8a`、`x86`、`x86_64` CPU 架构；Release APK 使用开发者证书签名，可直接安装：
 
 1. 进入仓库的 **Actions** 标签页，确认「Build APK」工作流运行成功
-2. 打开运行记录，在 **Artifacts** 下载 `app-debug-apk` / `app-release-apk`
+2. 打开运行记录，在 **Artifacts** 下载 `app-universal-debug-apk` / `app-universal-release-apk`
 3. 将 APK 安装到星界链云手机或任意 Android 设备
 
 > 也可以直接用 Android Studio 打开工程点 Run，或本机执行 `./gradlew :app:assembleDebug`。
