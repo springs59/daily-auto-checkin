@@ -10,7 +10,8 @@ import com.autocheckin.daily.databinding.ItemSiteBinding
 class SiteAdapter(
     private val onToggle: (SiteConfig, Boolean) -> Unit,
     private val onEdit: (SiteConfig) -> Unit,
-    private val onReset: (SiteConfig) -> Unit
+    private val onReset: (SiteConfig) -> Unit,
+    private val onDelete: (SiteConfig) -> Unit
 ) : RecyclerView.Adapter<SiteAdapter.VH>() {
 
     private val items = mutableListOf<SiteConfig>()
@@ -40,5 +41,7 @@ class SiteAdapter(
         b.editBtn.setOnClickListener { onEdit(site) }
         b.resetBtn.visibility = if (site.builtin) View.VISIBLE else View.GONE
         b.resetBtn.setOnClickListener { onReset(site) }
+        b.deleteBtn.visibility = if (site.builtin) View.GONE else View.VISIBLE
+        b.deleteBtn.setOnClickListener { onDelete(site) }
     }
 }

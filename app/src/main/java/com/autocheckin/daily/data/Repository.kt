@@ -77,6 +77,7 @@ class Repository(private val context: Context) {
     fun deleteCustomSite(id: String) {
         val list = getCustomSites().filter { it.id != id }
         writeJsonArray(KEY_CUSTOM_SITES, SiteConfig.listToJson(list))
+        deleteAccountsForSite(id)
     }
 
     fun getSiteOverride(id: String): SiteConfig? {
@@ -122,6 +123,61 @@ class Repository(private val context: Context) {
     fun deleteAccount(id: String) {
         val list = getAccounts().filter { it.id != id }
         writeJsonArray(KEY_ACCOUNTS, Account.listToJson(list))
+    }
+
+    private fun deleteAccountsForSite(siteId: String) {
+        val list = getAccounts().filter { it.siteId != siteId }
+        writeJsonArray(KEY_ACCOUNTS, Account.listToJson(list))
+    }
+
+    // ---------------- Backup ----------------
+    fun exportConfig(): JSONObject = JSONObject().apply {
+        put("format", "autocheckin-backup")
+        put("version", 1)
+        put("customSites", SiteConfig.listToJson(getCustomSites()))
+        put("siteOverrides", JSONArray().apply {
+            getBuiltinSites().forEach { site ->
+                getSiteOverride(site.id)?.let { put(it.toJson()) }
+            }
+        })
+        put("accounts", Account.listToJson(getAccounts()))
+        put("settings", JSONObject().apply {
+            put("scheduleEnabled", scheduleEnabled)
+            put("scheduleHour", scheduleHour)
+            put("scheduleMinute", scheduleMinute)
+        })
+    }
+
+    fun importConfig(backup: JSONObject): Int {
+        require(backup.optString("format") == "autocheckin-backup") { "不是支持的配置文件" }
+        val importedSites = backup.optJSONArray("customSites") ?: JSONArray()
+        val importedOverrides = backup.optJSONArray("siteOverrides") ?: JSONArray()
+        val importedAccounts = backup.optJSONArray("accounts") ?: JSONArray()
+        val builtInIds = getBuiltinSites().map { it.id }.toSet()
+
+        for (index in 0 until importedSites.length()) {
+            val site = SiteConfig.fromJson(importedSites.getJSONObject(index)).copy(builtin = false)
+            require(site.id.isNotBlank() && site.name.isNotBlank() && site.checkin.url.isNotBlank()) { "站点配置不完整" }
+            if (site.id !in builtInIds) saveCustomSite(site)
+        }
+        for (index in 0 until importedOverrides.length()) {
+            val site = SiteConfig.fromJson(importedOverrides.getJSONObject(index))
+            if (site.id in builtInIds) setSiteOverride(site.copy(builtin = true))
+        }
+        var count = 0
+        for (index in 0 until importedAccounts.length()) {
+            val account = Account.fromJson(importedAccounts.getJSONObject(index))
+            if (account.siteId.isNotBlank() && account.name.isNotBlank() && account.token.isNotBlank() && getSite(account.siteId) != null) {
+                saveAccount(account.copy(id = java.util.UUID.randomUUID().toString()))
+                count++
+            }
+        }
+        backup.optJSONObject("settings")?.let { settings ->
+            scheduleEnabled = settings.optBoolean("scheduleEnabled", scheduleEnabled)
+            scheduleHour = settings.optInt("scheduleHour", scheduleHour).coerceIn(0, 23)
+            scheduleMinute = settings.optInt("scheduleMinute", scheduleMinute).coerceIn(0, 59)
+        }
+        return count
     }
 
     fun updateAccountStatus(accountId: String, status: String) {

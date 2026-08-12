@@ -44,6 +44,8 @@ class SitesFragment : Fragment() {
             onReset = { site ->
                 repo.removeSiteOverride(site.id)
                 refresh()
+            },
+            onDelete = { site -> confirmDelete(site) }
             }
         )
         binding.siteList.layoutManager = LinearLayoutManager(requireContext())
@@ -102,6 +104,18 @@ class SitesFragment : Fragment() {
             }
         }
         dlg.show()
+    }
+
+    private fun confirmDelete(site: SiteConfig) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("删除站点")
+            .setMessage("删除 \"${site.name}\" 及其关联账号？")
+            .setPositiveButton("删除") { _, _ ->
+                repo.deleteCustomSite(site.id)
+                refresh()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     override fun onDestroyView() {

@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.autocheckin.daily.data.Account
@@ -14,6 +15,7 @@ import com.autocheckin.daily.data.SiteConfig
 import com.autocheckin.daily.databinding.DialogAccountBinding
 import com.autocheckin.daily.databinding.FragmentAccountsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.json.JSONObject
 import java.util.UUID
 
 class AccountsFragment : Fragment() {
@@ -24,6 +26,31 @@ class AccountsFragment : Fragment() {
     private lateinit var adapter: AccountAdapter
     private val sites = mutableListOf<SiteConfig>()
     private var selectedSiteId = ""
+
+    private val exportConfig = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            requireNotNull(requireContext().contentResolver.openOutputStream(uri)) { "无法创建文件" }.bufferedWriter().use {
+                it.write(repo.exportConfig().toString(2))
+            }
+            Toast.makeText(requireContext(), "配置已导出", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "导出失败：${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val importConfig = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            val text = requireContext().contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                ?: error("无法读取文件")
+            val count = repo.importConfig(JSONObject(text))
+            loadSites()
+            Toast.makeText(requireContext(), "已导入 $count 个账号", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "导入失败：${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,6 +83,10 @@ class AccountsFragment : Fragment() {
             }
         }
         binding.fabAddAccount.setOnClickListener { showAccountDialog(null) }
+        binding.exportConfigBtn.setOnClickListener { exportConfig.launch("autocheckin-backup.json") }
+        binding.importConfigBtn.setOnClickListener {
+            importConfig.launch(arrayOf("application/json", "text/plain"))
+        }
 
         loadSites()
     }
