@@ -39,3 +39,9 @@ Entries discovered by the Agent during task execution should follow this format:
 - Context: 完成工作区改动后
 - Instructions:
   - 自动提交并推送本次任务产生的改动到已配置的远程仓库。
+
+[User Instruction Summary]
+- Date: 2026-08-12
+- Context: 后续版本迭代
+- Instructions:
+  - 使用 V* 格式进行版本命名与更新迭代。
