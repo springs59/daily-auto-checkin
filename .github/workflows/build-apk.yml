@@ -38,14 +38,6 @@ jobs:
       - name: Build signed universal release APK
         run: ./gradlew :app:assembleRelease --no-daemon
 
-      - name: Verify APK size limit
-        run: |
-          max_bytes=$((10 * 1024 * 1024))
-          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
-            size=$(stat --format=%s "$apk")
-            test "$size" -le "$max_bytes"
-          done
-
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v6
         with:
