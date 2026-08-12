@@ -1,0 +1,46 @@
+[
+  {
+    "id": "jinman",
+    "name": "禁漫天堂",
+    "enabled": true,
+    "builtin": true,
+    "description": "禁漫天堂(18comic)每日签到。请先用抓包工具抓取 App 内签到请求，将真实 URL / 请求头 / 请求体填到下方模板中。Cookie 或 token 填入账号的 token 字段。",
+    "checkin": {
+      "url": "https://18comic.vip/API/checkin",
+      "method": "POST",
+      "headers": {
+        "User-Agent": "okhttp/4.9.2",
+        "Content-Type": "application/json",
+        "Cookie": "{{token}}"
+      },
+      "body": "{}",
+      "success": {
+        "type": "contains",
+        "value": "success"
+      },
+      "alreadySigned": ["已签到", "already", "repeat"]
+    }
+  },
+  {
+    "id": "noyacg",
+    "name": "NoyAcg",
+    "enabled": true,
+    "builtin": true,
+    "description": "NoyAcg 每日签到。请先用抓包工具抓取 App 内签到请求，将真实 URL / 请求头 / 请求体填到下方模板中。登录凭证填入账号的 token 字段。",
+    "checkin": {
+      "url": "https://noyacg.com/api/user/checkin",
+      "method": "POST",
+      "headers": {
+        "User-Agent": "okhttp/4.9.2",
+        "Content-Type": "application/json",
+        "Authorization": "{{token}}"
+      },
+      "body": "{}",
+      "success": {
+        "type": "contains",
+        "value": "success"
+      },
+      "alreadySigned": ["已签到", "already", "checkin"]
+    }
+  }
+]

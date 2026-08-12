@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="站点配置 JSON，字段说明见 docs/SITES_CONFIG.md。URL/请求头/请求体请按抓包文档填入真实值，凭证用 {{token}} 占位。"
+        android:textSize="12sp"
+        android:textColor="#888888" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="站点配置 JSON">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSiteJson"
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:fontFamily="monospace"
+            android:gravity="top"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:textSize="12sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local config
+local.properties
+
+# OS
+.DS_Store
+
+# Keystore (never commit)
+*.jks
+*.keystore
