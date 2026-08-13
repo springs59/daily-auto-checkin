@@ -11,8 +11,8 @@ android {
         applicationId = "com.autocheckin.daily"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "V1.1"
+        versionCode = 3
+        versionName = "V1.2"
 
         ndk {
             abiFilters += setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

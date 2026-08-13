@@ -41,6 +41,10 @@ class HomeFragment : Fragment() {
 
         binding.serviceSwitch.isChecked = repo.serviceEnabled
         binding.scheduleSwitch.isChecked = repo.scheduleEnabled
+        binding.xiaoheiheCheckinSwitch.isChecked = repo.xiaoheiheCheckinEnabled
+        binding.xiaoheiheTaskSwitch.isChecked = repo.xiaoheiheTaskEnabled
+        binding.xiaoheiheRewardSwitch.isChecked = repo.xiaoheiheRewardEnabled
+        binding.xiaoheiheLotterySwitch.isChecked = repo.xiaoheiheLotteryEnabled
         binding.timeButton.text = repo.scheduleText()
 
         binding.serviceSwitch.setOnCheckedChangeListener { _, checked ->
@@ -58,6 +62,11 @@ class HomeFragment : Fragment() {
             }
             refresh()
         }
+
+        binding.xiaoheiheCheckinSwitch.setOnCheckedChangeListener { _, checked -> repo.xiaoheiheCheckinEnabled = checked; refresh() }
+        binding.xiaoheiheTaskSwitch.setOnCheckedChangeListener { _, checked -> repo.xiaoheiheTaskEnabled = checked; refresh() }
+        binding.xiaoheiheRewardSwitch.setOnCheckedChangeListener { _, checked -> repo.xiaoheiheRewardEnabled = checked; refresh() }
+        binding.xiaoheiheLotterySwitch.setOnCheckedChangeListener { _, checked -> repo.xiaoheiheLotteryEnabled = checked; refresh() }
 
         binding.timeButton.setOnClickListener {
             TimePickerDialog(
@@ -126,7 +135,7 @@ class HomeFragment : Fragment() {
     private fun refresh() {
         val sites = repo.getEffectiveSites()
         val accounts = repo.getAccounts()
-        val enabledSites = sites.count { it.enabled }
+        val enabledSites = sites.count { it.enabled && isEnabledForHome(it.id) }
         val enabledAccounts = accounts.count { it.enabled }
         val nextText = if (repo.serviceEnabled && repo.scheduleEnabled) {
             val t = SimpleDateFormat("HH:mm", Locale.getDefault()).format(
@@ -138,6 +147,14 @@ class HomeFragment : Fragment() {
         }
         binding.summaryText.text =
             "启用站点: $enabledSites/${sites.size}\n启用账号: $enabledAccounts/${accounts.size}\n$nextText"
+    }
+
+    private fun isEnabledForHome(siteId: String): Boolean = when (siteId) {
+        "xiaoheihe-checkin" -> repo.xiaoheiheCheckinEnabled
+        "xiaoheihe-task" -> repo.xiaoheiheTaskEnabled
+        "xiaoheihe-reward" -> repo.xiaoheiheRewardEnabled
+        "xiaoheihe-lottery" -> repo.xiaoheiheLotteryEnabled
+        else -> true
     }
 
     override fun onDestroyView() {

@@ -17,6 +17,10 @@ class Repository(private val context: Context) {
         private const val KEY_SCHEDULE_HOUR = "schedule_hour"
         private const val KEY_SCHEDULE_MINUTE = "schedule_minute"
         private const val KEY_SCHEDULE_ENABLED = "schedule_enabled"
+        private const val KEY_XIAOHEIHE_CHECKIN_ENABLED = "xiaoheihe_checkin_enabled"
+        private const val KEY_XIAOHEIHE_TASK_ENABLED = "xiaoheihe_task_enabled"
+        private const val KEY_XIAOHEIHE_REWARD_ENABLED = "xiaoheihe_reward_enabled"
+        private const val KEY_XIAOHEIHE_LOTTERY_ENABLED = "xiaoheihe_lottery_enabled"
         const val MAX_LOGS = 200
     }
 
@@ -36,6 +40,22 @@ class Repository(private val context: Context) {
     var scheduleMinute: Int
         get() = prefs.getInt(KEY_SCHEDULE_MINUTE, 0)
         set(value) = prefs.edit().putInt(KEY_SCHEDULE_MINUTE, value).apply()
+
+    var xiaoheiheCheckinEnabled: Boolean
+        get() = prefs.getBoolean(KEY_XIAOHEIHE_CHECKIN_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_XIAOHEIHE_CHECKIN_ENABLED, value).apply()
+
+    var xiaoheiheTaskEnabled: Boolean
+        get() = prefs.getBoolean(KEY_XIAOHEIHE_TASK_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_XIAOHEIHE_TASK_ENABLED, value).apply()
+
+    var xiaoheiheRewardEnabled: Boolean
+        get() = prefs.getBoolean(KEY_XIAOHEIHE_REWARD_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_XIAOHEIHE_REWARD_ENABLED, value).apply()
+
+    var xiaoheiheLotteryEnabled: Boolean
+        get() = prefs.getBoolean(KEY_XIAOHEIHE_LOTTERY_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_XIAOHEIHE_LOTTERY_ENABLED, value).apply()
 
     fun scheduleText(): String = "%02d:%02d".format(scheduleHour, scheduleMinute)
 

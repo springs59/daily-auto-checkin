@@ -18,7 +18,7 @@ object CheckinExecutor {
     suspend fun runAll(context: Context, force: Boolean) {
         val repo = Repository(context)
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val sites = repo.getEffectiveSites().filter { it.enabled }
+        val sites = repo.getEffectiveSites().filter { it.enabled && isEnabledForSite(it.id, repo) }
 
         for (site in sites) {
             val accounts = repo.getAccounts(site.id).filter { it.enabled }
@@ -45,5 +45,13 @@ object CheckinExecutor {
                 )
             }
         }
+    }
+
+    private fun isEnabledForSite(siteId: String, repo: Repository): Boolean = when (siteId) {
+        "xiaoheihe-checkin" -> repo.xiaoheiheCheckinEnabled
+        "xiaoheihe-task" -> repo.xiaoheiheTaskEnabled
+        "xiaoheihe-reward" -> repo.xiaoheiheRewardEnabled
+        "xiaoheihe-lottery" -> repo.xiaoheiheLotteryEnabled
+        else -> true
     }
 }

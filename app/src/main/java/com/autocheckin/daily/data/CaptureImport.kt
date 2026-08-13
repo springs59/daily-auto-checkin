@@ -46,7 +46,7 @@ object CaptureImporter {
         .groupBy { host(it.url) }
         .map { (domain, grouped) ->
             val scored = grouped.map { request -> score(request) }.sortedByDescending { it.score }
-            CapturePlatformGroup(domain, scored, scored.flatMap { it.evidence }.distinct())
+            CapturePlatformGroup(platformName(domain), scored, listOf("平台域名：$domain") + scored.flatMap { it.evidence }.distinct())
         }.sortedBy { it.name }
 
     fun mask(name: String, value: String): String {
@@ -66,7 +66,7 @@ object CaptureImporter {
             request.responseBody?.contains("\"code\":0") == true -> SiteConfig.SuccessRule("contains", value = "\"code\":0")
             else -> SiteConfig.SuccessRule("none")
         }
-        val siteId = "import-" + host(request.url).replace(Regex("[^a-zA-Z0-9]+"), "-").trim('-')
+        val siteId = siteIdFor(request)
         val site = SiteConfig(siteId, siteName, true, false, "从 ${request.sourceLabel} 导入", SiteConfig.CheckinConfig(
             request.url, request.method.uppercase(), headers, body, success, emptyList()
         ))
@@ -151,7 +151,7 @@ object CaptureImporter {
 
     private fun score(request: CapturedRequest): ScoredCaptureRequest {
         val source = "${request.url} ${request.body} ${request.responseBody.orEmpty()}".lowercase(Locale.ROOT)
-        val words = listOf("sign", "checkin", "attendance", "daily", "reward", "task")
+        val words = listOf("sign", "checkin", "attendance", "daily", "reward", "task", "mission", "claim")
         val matched = words.filter { source.contains(it) }; val evidence = matched.map { "检测到签到语义：$it" }.toMutableList()
         if (request.method.uppercase() in setOf("POST", "PUT", "PATCH")) evidence += "写操作请求"
         return ScoredCaptureRequest(request, matched.size * 10 + if (evidence.contains("写操作请求")) 3 else 0, evidence.ifEmpty { listOf("按主域名归组") })
@@ -159,5 +159,24 @@ object CaptureImporter {
 
     private fun headers(items: JSONArray?): MutableMap<String, String> = buildMap { for (i in 0 until (items?.length() ?: 0)) { val item = items?.optJSONObject(i) ?: continue; val name = item.optString("name", item.optString("key")); val value = item.optString("value"); if (name.isNotBlank()) put(name, value) } }.toMutableMap()
     private fun host(url: String): String = try { URI(url).host?.removePrefix("www.") ?: "未知平台" } catch (_: Exception) { "未知平台" }
+    private fun platformName(domain: String): String = when {
+        domain.contains("xiaoheihe") || domain.contains("heybox") -> "小黑盒（$domain）"
+        domain.contains("miyoushe") || domain.contains("mihoyo") -> "米游社（$domain）"
+        else -> domain
+    }
+    private fun siteIdFor(request: CapturedRequest): String {
+        val domain = host(request.url)
+        if (domain.contains("xiaoheihe") || domain.contains("heybox")) {
+            val source = "${request.url} ${request.body} ${request.responseBody.orEmpty()}".lowercase(Locale.ROOT)
+            val action = when {
+                source.contains("sign") || source.contains("checkin") -> "checkin"
+                source.contains("reward") || source.contains("claim") -> "reward"
+                source.contains("lottery") || source.contains("pool") -> "lottery"
+                else -> "task"
+            }
+            return "xiaoheihe-$action"
+        }
+        return "import-" + domain.replace(Regex("[^a-zA-Z0-9]+"), "-").trim('-')
+    }
     private fun isPcap(bytes: ByteArray): Boolean = bytes.size >= 4 && bytes.copyOfRange(0, 4).let { it.contentEquals(byteArrayOf(0xd4.toByte(), 0xc3.toByte(), 0xb2.toByte(), 0xa1.toByte())) || it.contentEquals(byteArrayOf(0xa1.toByte(), 0xb2.toByte(), 0xc3.toByte(), 0xd4.toByte())) || it.contentEquals(byteArrayOf(0x4d, 0x3c, 0xb2.toByte(), 0xa1.toByte())) || it.contentEquals(byteArrayOf(0xa1.toByte(), 0xb2.toByte(), 0x3c, 0x4d)) }
 }

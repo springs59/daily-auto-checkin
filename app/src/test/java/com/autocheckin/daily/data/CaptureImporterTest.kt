@@ -47,4 +47,14 @@ class CaptureImporterTest {
         assertEquals("{{token}}", site.checkin.headers["Authorization"])
         assertEquals("Example", account.name.removeSuffix(" 会话"))
     }
+
+    @Test
+    fun labelsXiaoheihePlatformAndBuildsTaskSite() {
+        val request = CapturedRequest("https://api.xiaoheihe.com/task/daily", "POST")
+        val group = CaptureImporter.classify(listOf(request)).single()
+        val (site, _) = CaptureImporter.buildDraft(request, "小黑盒每日任务", "")
+
+        assertTrue(group.name.startsWith("小黑盒"))
+        assertEquals("xiaoheihe-task", site.id)
+    }
 }

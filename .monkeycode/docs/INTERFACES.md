@@ -15,3 +15,5 @@
 `CaptureImporter.classify(requests)` 以主域名分组，并按 URL、请求体和响应中的签到语义排序。`Authorization`、`Cookie`、`token`、`secret`、`password`、`session` 等字段在预览中显示为掩码。
 
 PCAP 与 PCAPNG 仅提取文件中可见的 HTTP 会话；HTTPS 数据需在源工具完成 TLS 解密后导出。
+
+小黑盒域名会显示为“小黑盒”，并根据请求中的签到、奖励、抽奖或任务语义保存为 `xiaoheihe-checkin`、`xiaoheihe-reward`、`xiaoheihe-lottery` 或 `xiaoheihe-task` 站点配置。首页为四类配置提供独立执行开关。
