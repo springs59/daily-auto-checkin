@@ -45,3 +45,10 @@ Entries discovered by the Agent during task execution should follow this format:
 - Context: 后续版本迭代
 - Instructions:
   - 使用 V* 格式进行版本命名与更新迭代。
+
+[Project Knowledge Summary]
+- Date: 2026-08-13
+- Context: Discovered by Agent while performing Xiaoheihe integration verification
+- Category: Environment Configuration
+- Instructions:
+  - Android Gradle verification requires a valid Android SDK path through `ANDROID_HOME` or `/workspace/local.properties`.

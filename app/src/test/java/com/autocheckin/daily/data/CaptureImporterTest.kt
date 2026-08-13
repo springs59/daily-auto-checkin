@@ -57,4 +57,51 @@ class CaptureImporterTest {
         assertTrue(group.name.startsWith("小黑盒"))
         assertEquals("xiaoheihe-task", site.id)
     }
+
+    @Test
+    fun parsesAndNormalizesXiaoheiheCredentialFormat() {
+        val raw = "123456#pkey=pk-value;x_xhh_tokenid=token-value"
+        val credentials = XiaoheiheCredentialParser.parse(raw)
+
+        assertEquals("123456", credentials?.heyboxId)
+        assertEquals("heybox_id=123456; pkey=pk-value; x_xhh_tokenid=token-value", credentials?.toCookie())
+        assertEquals(credentials?.toCookie(), XiaoheiheCredentialParser.normalize(raw))
+    }
+
+    @Test
+    fun keepsRegularCookieCredentialUnchanged() {
+        val cookie = "pkey=pk-value; x_xhh_tokenid=token-value"
+        assertEquals(cookie, XiaoheiheCredentialParser.normalize(cookie))
+    }
+
+    @Test
+    fun storesNormalizedXiaoheiheCredentialWithCookieTemplate() {
+        val request = CapturedRequest(
+            "https://api.xiaoheihe.com/checkin",
+            "POST",
+            mapOf("Cookie" to "old-cookie")
+        )
+        val (_, account) = CaptureImporter.buildDraft(
+            request,
+            "小黑盒签到",
+            "123456#pkey=pk-value;x_xhh_tokenid=token-value"
+        )
+
+        assertEquals(
+            "heybox_id=123456; pkey=pk-value; x_xhh_tokenid=token-value",
+            account.token
+        )
+    }
+
+    @Test
+    fun classifiesChineseXiaoheiheActions() {
+        val requests = listOf(
+            CapturedRequest("https://api.xiaoheihe.com/签到", "POST"),
+            CapturedRequest("https://api.xiaoheihe.com/奖励领取", "POST"),
+            CapturedRequest("https://api.xiaoheihe.com/奖池", "GET")
+        )
+        val sites = requests.map { CaptureImporter.buildDraft(it, "小黑盒", "").first.id }
+
+        assertEquals(listOf("xiaoheihe-checkin", "xiaoheihe-reward", "xiaoheihe-lottery"), sites)
+    }
 }

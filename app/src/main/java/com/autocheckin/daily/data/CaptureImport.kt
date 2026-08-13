@@ -58,9 +58,10 @@ object CaptureImporter {
         require(siteName.isNotBlank()) { "请输入站点名称" }
         require(request.url.isNotBlank()) { "请求 URL 为空" }
         val matchingHeader = request.headers.entries.firstOrNull { sensitiveNames.any { key -> it.key.lowercase().contains(key) } }
+        val normalizedToken = if (isXiaoheihe(request)) XiaoheiheCredentialParser.normalize(token) else token
         val headers = request.headers.toMutableMap()
-        if (matchingHeader != null && token.isNotBlank()) headers[matchingHeader.key] = "{{token}}"
-        val body = if (token.isNotBlank()) request.body.replace(token, "{{token}}") else request.body
+        if (matchingHeader != null && normalizedToken.isNotBlank()) headers[matchingHeader.key] = "{{token}}"
+        val body = if (normalizedToken.isNotBlank()) request.body.replace(token, "{{token}}") else request.body
         val success = when {
             request.responseBody?.contains("\"success\":true") == true -> SiteConfig.SuccessRule("contains", value = "\"success\":true")
             request.responseBody?.contains("\"code\":0") == true -> SiteConfig.SuccessRule("contains", value = "\"code\":0")
@@ -70,7 +71,7 @@ object CaptureImporter {
         val site = SiteConfig(siteId, siteName, true, false, "从 ${request.sourceLabel} 导入", SiteConfig.CheckinConfig(
             request.url, request.method.uppercase(), headers, body, success, emptyList()
         ))
-        return site to Account(java.util.UUID.randomUUID().toString(), siteId, "$siteName 会话", token, true)
+        return site to Account(java.util.UUID.randomUUID().toString(), siteId, "$siteName 会话", normalizedToken, true)
     }
 
     private fun parseJson(root: JSONObject, filename: String): CaptureParseResult = when {
@@ -151,7 +152,7 @@ object CaptureImporter {
 
     private fun score(request: CapturedRequest): ScoredCaptureRequest {
         val source = "${request.url} ${request.body} ${request.responseBody.orEmpty()}".lowercase(Locale.ROOT)
-        val words = listOf("sign", "checkin", "attendance", "daily", "reward", "task", "mission", "claim")
+        val words = listOf("sign", "checkin", "attendance", "签到", "daily", "reward", "task", "mission", "claim", "任务", "奖励", "领取", "奖池")
         val matched = words.filter { source.contains(it) }; val evidence = matched.map { "检测到签到语义：$it" }.toMutableList()
         if (request.method.uppercase() in setOf("POST", "PUT", "PATCH")) evidence += "写操作请求"
         return ScoredCaptureRequest(request, matched.size * 10 + if (evidence.contains("写操作请求")) 3 else 0, evidence.ifEmpty { listOf("按主域名归组") })
@@ -169,14 +170,16 @@ object CaptureImporter {
         if (domain.contains("xiaoheihe") || domain.contains("heybox")) {
             val source = "${request.url} ${request.body} ${request.responseBody.orEmpty()}".lowercase(Locale.ROOT)
             val action = when {
-                source.contains("sign") || source.contains("checkin") -> "checkin"
-                source.contains("reward") || source.contains("claim") -> "reward"
-                source.contains("lottery") || source.contains("pool") -> "lottery"
+                source.contains("sign") || source.contains("checkin") || source.contains("签到") -> "checkin"
+                source.contains("reward") || source.contains("claim") || source.contains("奖励") || source.contains("领取") -> "reward"
+                source.contains("lottery") || source.contains("pool") || source.contains("奖池") -> "lottery"
                 else -> "task"
             }
             return "xiaoheihe-$action"
         }
         return "import-" + domain.replace(Regex("[^a-zA-Z0-9]+"), "-").trim('-')
     }
+    private fun isXiaoheihe(request: CapturedRequest): Boolean =
+        host(request.url).let { it.contains("xiaoheihe") || it.contains("heybox") }
     private fun isPcap(bytes: ByteArray): Boolean = bytes.size >= 4 && bytes.copyOfRange(0, 4).let { it.contentEquals(byteArrayOf(0xd4.toByte(), 0xc3.toByte(), 0xb2.toByte(), 0xa1.toByte())) || it.contentEquals(byteArrayOf(0xa1.toByte(), 0xb2.toByte(), 0xc3.toByte(), 0xd4.toByte())) || it.contentEquals(byteArrayOf(0x4d, 0x3c, 0xb2.toByte(), 0xa1.toByte())) || it.contentEquals(byteArrayOf(0xa1.toByte(), 0xb2.toByte(), 0x3c, 0x4d)) }
 }
