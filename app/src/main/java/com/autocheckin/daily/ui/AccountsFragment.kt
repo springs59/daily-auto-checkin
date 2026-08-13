@@ -10,8 +10,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.autocheckin.daily.data.Account
+import com.autocheckin.daily.data.CaptureImporter
+import com.autocheckin.daily.data.CapturedRequest
 import com.autocheckin.daily.data.Repository
 import com.autocheckin.daily.data.SiteConfig
+import com.autocheckin.daily.databinding.DialogCaptureDraftBinding
 import com.autocheckin.daily.databinding.DialogAccountBinding
 import com.autocheckin.daily.databinding.FragmentAccountsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -26,6 +29,24 @@ class AccountsFragment : Fragment() {
     private lateinit var adapter: AccountAdapter
     private val sites = mutableListOf<SiteConfig>()
     private var selectedSiteId = ""
+
+    private val importCapture = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            val bytes = requireContext().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: error("无法读取文件")
+            val result = CaptureImporter.parse(bytes, uri.lastPathSegment.orEmpty())
+            val groups = CaptureImporter.classify(result.requests)
+            if (groups.isEmpty()) {
+                val detail = result.warnings.joinToString("\n").ifBlank { "文件中没有可导入的 HTTP 请求" }
+                showCaptureHelp(detail)
+            } else {
+                showCaptureCandidates(result.format, groups.flatMap { it.requests }, result.warnings)
+            }
+        } catch (e: Exception) {
+            showCaptureHelp("导入失败：${e.message}")
+        }
+    }
 
     private val exportConfig = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -84,6 +105,7 @@ class AccountsFragment : Fragment() {
         }
         binding.fabAddAccount.setOnClickListener { showAccountDialog(null) }
         binding.exportConfigBtn.setOnClickListener { exportConfig.launch("autocheckin-backup.json") }
+        binding.importCaptureBtn.setOnClickListener { importCapture.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "application/vnd.tcpdump.pcap")) }
         binding.importConfigBtn.setOnClickListener {
             importConfig.launch(arrayOf("application/json", "text/plain"))
         }
@@ -118,6 +140,73 @@ class AccountsFragment : Fragment() {
             }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    private fun showCaptureHelp(message: String) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("抓包文件导入说明")
+            .setMessage("支持 HAR、HAR JSON、cURL、Postman Collection、Insomnia Export、OpenAPI JSON、PCAP 和 PCAPNG。\n\n浏览器可从网络面板导出 HAR 或复制为 cURL。PCAP 与 PCAPNG 中的 HTTPS 请求需要先在源工具完成 TLS 解密；加密原始包只能提供连接元数据。\n\n$message")
+            .setPositiveButton("知道了", null)
+            .show()
+    }
+
+    private fun showCaptureCandidates(
+        format: String,
+        candidates: List<com.autocheckin.daily.data.ScoredCaptureRequest>,
+        warnings: List<String>
+    ) {
+        val labels = candidates.map { candidate ->
+            val request = candidate.request
+            "${request.method} ${request.url}\n评分 ${candidate.score}：${candidate.evidence.joinToString("、")}"
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("$format：选择签到请求")
+            .setMessage(warnings.joinToString("\n").ifBlank { "已按平台和签到语义排序，请确认实际签到请求。" })
+            .setItems(labels) { _, which -> showCaptureDraft(candidates[which].request, candidates[which].evidence) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showCaptureDraft(request: CapturedRequest, evidence: List<String>) {
+        val draft = DialogCaptureDraftBinding.inflate(layoutInflater)
+        draft.captureSummary.text = "来源：${request.sourceLabel}\n${request.method} ${request.url}\n${evidence.joinToString("、")}\n敏感请求头在下方以掩码显示。请核对内容后保存。"
+        draft.captureSiteName.setText(request.url.substringAfter("://").substringBefore('/'))
+        draft.captureUrl.setText(request.url)
+        draft.captureMethod.setText(request.method)
+        draft.captureHeaders.setText(request.headers.entries.joinToString("\n") { "${it.key}: ${CaptureImporter.mask(it.key, it.value)}" })
+        draft.captureBody.setText(request.body)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("确认签到配置")
+            .setView(draft.root)
+            .setPositiveButton("保存", null)
+            .setNegativeButton("取消", null)
+            .create().also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        try {
+                            val headers = draft.captureHeaders.text?.toString().orEmpty().lineSequence().mapNotNull { line ->
+                                line.split(":", limit = 2).takeIf { it.size == 2 }?.let { it[0].trim() to it[1].trim() }
+                            }.toMap()
+                            val edited = request.copy(
+                                url = draft.captureUrl.text?.toString().orEmpty().trim(),
+                                method = draft.captureMethod.text?.toString().orEmpty().trim(),
+                                headers = headers,
+                                body = draft.captureBody.text?.toString().orEmpty()
+                            )
+                            val token = draft.captureToken.text?.toString().orEmpty()
+                            val (site, account) = CaptureImporter.buildDraft(edited, draft.captureSiteName.text?.toString().orEmpty().trim(), token)
+                            repo.saveCustomSite(site)
+                            if (token.isNotBlank()) repo.saveAccount(account)
+                            loadSites()
+                            Toast.makeText(requireContext(), "已保存站点 ${site.name}${if (token.isNotBlank()) " 和账号" else "；请补充登录凭据"}", Toast.LENGTH_LONG).show()
+                            dialog.dismiss()
+                        } catch (e: Exception) {
+                            Toast.makeText(requireContext(), "保存失败：${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                dialog.show()
+            }
     }
 
     private fun showAccountDialog(existing: Account?) {
